@@ -1,3 +1,4 @@
+from conversions import *
 import pyaudio
 import wave
 import array
@@ -30,15 +31,6 @@ pitches = {0: "C",
 
 def is_silent(audio_data):
     return max(audio_data) < 500
-
-
-def convert_to_letter_pitch(freq, middle_a=440):
-    a_4 = middle_a
-    c_0 = a_4 * pow(2, -4.75)
-    print freq, a_4, c_0
-    h = round(12 * math.log(freq/c_0, 2))
-    octave = h//12
-    return pitches[h % 12] + str(int(octave))
 
 
 def filter_bad(last_good_freq, last_good_time, pitch):
