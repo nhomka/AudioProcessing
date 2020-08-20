@@ -1,111 +1,97 @@
 from conversions import *
+from audio_cleanup import *
 import pyaudio
 import wave
 import array
-import datetime
+from datetime import datetime, timedelta
 import numpy as np
 import aubio
-import math
 from matplotlib import pyplot as plt
 
-CHUNK = 512
-FORMAT = pyaudio.paFloat32
-CHANNELS = 2
-RATE = 44100
-FILE_NAME = "Recording.wav"
 
+class AudioRecorder:
+    def __init__(self, chunk=512, py_format=pyaudio.paFloat32,
+                 channels=2, rate=44100, file_name="Recording.wav"):
+        self.chunk = chunk
+        self.format = py_format
+        self.channels = channels
+        self.rate = rate
+        self.file_name = file_name
+        self.min_Hz = 200
+        self.max_Hz = 1500
 
-def is_silent(audio_data):
-    return max(audio_data) < 500
+    def get_min_max(self):
+        self.min_Hz = input("Enter minimum pitch in Hz: ")
+        self.max_Hz = input("Enter maximum pitch in Hz: ")
 
+    def write_audio_to_file(self, frames, sampwidth):
+        # Write To File
+        wav_file = wave.open(self.file_name, 'wb')
+        wav_file.setnchannels(self.channels)
+        wav_file.setsampwidth(sampwidth)
+        wav_file.setframerate(self.rate)
+        wav_file.writeframes(b''.join(frames))  # Append Frames to File
+        wav_file.close()
 
-def filter_bad(last_good_freq, last_good_time, pitch):
-    if last_good_time > datetime.datetime.now() - datetime.timedelta(seconds=.25):
-        # print last_good_freq, last_good_time
-        if last_good_freq != 0 and (last_good_freq-pitch) > pitch/2:
-            # print "ya", last_good_freq, pitch
-            pitch = last_good_freq
-        if pitch < 200 or pitch > 1500:
-            pitch = last_good_freq
-    else:
-        if pitch < 200 or pitch > 1500:
-            pitch = 0
-    return pitch
+    @staticmethod
+    def plot_pitch_data(pitch_data):
+        plt.plot(pitch_data)
+        plt.show()
 
+    def record_audio(self, record_time=10, record=True):
+        record_seconds = record_time
+        timestamp = datetime.now()
 
-def record_audio(record_time = 10):
-    record_seconds = record_time
-    min_pitch = 5000
-    max_pitch = 0
-    timestamp = datetime.datetime.now()
-    # Instantiate PyAudio
-    p = pyaudio.PyAudio()
-    p_detection = aubio.pitch("default", 2048, 1024, 44100)
-    # Set unit.
-    p_detection.set_unit("Hz")
-    p_detection.set_silence(-40)
+        # Instantiate PyAudio
+        p = pyaudio.PyAudio()
 
-    # Open Stream
-    stream = p.open(format=FORMAT,
-                    channels=CHANNELS,
-                    rate=RATE,
-                    input=True,
-                    frames_per_buffer=CHUNK)
+        # Initialize pitch detection.
+        p_detection = aubio.pitch("default", 2048, 1024, 44100)
+        p_detection.set_unit("Hz")
+        p_detection.set_silence(-40)
 
-    # Record Data
-    frames = []
-    numpy_data = []
-    last_good = 0
-    last_good_time = datetime.datetime.now()
+        # Open Stream
+        stream = p.open(format=self.format,
+                        channels=self.channels,
+                        rate=self.rate,
+                        input=record,
+                        frames_per_buffer=self.chunk)
 
-    for i in range(0, int(RATE / CHUNK * record_seconds)):
-        data = stream.read(CHUNK)
-        data_chunk = array.array('h', data)
-        samples = np.frombuffer(data, dtype=aubio.float_type)
-        pitch = p_detection(samples)[0]
-        real_pitch = pitch
-        pitch = filter_bad(last_good, last_good_time, pitch)
-        if min_pitch > pitch > 200:
-            min_pitch = pitch
-        if pitch > max_pitch:
-            max_pitch = pitch
-        if is_silent(data_chunk):
-            if datetime.datetime.now() < timestamp + datetime.timedelta(0, 5):
+        # Record Data
+        frames = []
+        numpy_data = []
+        last_good = 0
+        last_good_time = datetime.now()
+        min_pitch, max_pitch = 5000, 5
+
+        for i in range(0, int(self.rate / self.chunk * record_seconds)):
+            data = stream.read(self.chunk)
+            data_chunk = array.array('h', data)
+            samples = np.frombuffer(data, dtype=aubio.float_type)
+            real_pitch = p_detection(samples)[0]
+            pitch = filter_bad(last_good, last_good_time, real_pitch)
+            if min_pitch > pitch > 200:
+                min_pitch = pitch
+            if pitch > max_pitch:
+                max_pitch = pitch
+            if is_silent(data_chunk) and datetime.now() < timestamp + timedelta(0, 5):
                 frames.append(data)
-                # print("No Noise but still writing")
-            else:
-                1
-                # print("No Noise")
-        else:
-            # print("Noise encountered")
-            frames.append(data)
-            timestamp = datetime.datetime.now()
-            # snippet = snippet.reshape(-1, pitch.hop_size)
-            # snippet = snippet.astype(aubio.float_type)
-            # pitch_candidate = pitch(snippet)
-            if real_pitch > 200:
-                last_good = pitch
-                last_good_time = datetime.datetime.now()
-                # print convert_to_letter_pitch(pitch, 440)
-        numpy_data.append(pitch)
-        # print("\n")
+            else:  # Noise encountered
+                frames.append(data)
+                timestamp = datetime.now()
+                if real_pitch > 200:  # Good threshold of input pitch
+                    last_good, last_good_time = pitch, timestamp
+            numpy_data.append(pitch)
 
-    # Write To File
-    wav_file = wave.open(FILE_NAME, 'wb')
-    wav_file.setnchannels(CHANNELS)
-    wav_file.setsampwidth(p.get_sample_size(FORMAT))
-    wav_file.setframerate(RATE)
-    wav_file.writeframes(b''.join(frames))  # Append Frames to File
-    wav_file.close()
+        # Write Audio to file
+        # self.write_audio_to_file(frames, p.get_sample_size(self.format))
 
-    # Stop Stream
-    stream.stop_stream()
-    stream.close()
-    p.terminate()
+        # Stop Stream
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
 
-    # plot data
-    # plt.plot(numpy_data)
-    # plt.show()
+        # Plot Data
+        # self.plot_pitch_data(numpy_data)
 
-    return min_pitch, max_pitch
-
+        return min_pitch, max_pitch

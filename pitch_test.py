@@ -1,15 +1,16 @@
 import math
-import record_audio
+from record_audio import *
 import time
 from random_functions import *
 from conversions import *
 
 
 def start():
+    recorder = AudioRecorder()
     print "Recording calibration starts now!"
-    min_pitch, max_pitch = record_audio.record_audio(5)
-    low = convert_to_letter_pitch(min_pitch)
-    high = convert_to_letter_pitch(max_pitch)
+    recorder.get_min_max()
+    low = convert_to_letter_pitch(recorder.min_Hz)
+    high = convert_to_letter_pitch(recorder.max_Hz)
 
     print low, high, [(i, j) for i, j in pitches.items()], low[:-1]
     low_val = convert_letter_pitch_to_interval(low)
@@ -28,7 +29,7 @@ def start():
         print 1
         time.sleep(1)
         print "GO"
-        l, h = record_audio.record_audio(1.5)
+        l, h = recorder.record_audio(1.5)
         l_n = convert_to_letter_pitch(l)
         h_n = convert_to_letter_pitch(h)
         print l_n, h_n, note_n
