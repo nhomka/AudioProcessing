@@ -12,7 +12,6 @@ CHUNK = 512
 FORMAT = pyaudio.paFloat32
 CHANNELS = 2
 RATE = 44100
-RECORD_SECONDS = 10
 FILE_NAME = "Recording.wav"
 
 pitches = {0: "C",
@@ -35,9 +34,9 @@ def is_silent(audio_data):
 
 def filter_bad(last_good_freq, last_good_time, pitch):
     if last_good_time > datetime.datetime.now() - datetime.timedelta(seconds=.25):
-        print last_good_freq, last_good_time
+        # print last_good_freq, last_good_time
         if last_good_freq != 0 and (last_good_freq-pitch) > pitch/2:
-            print "ya", last_good_freq, pitch
+            # print "ya", last_good_freq, pitch
             pitch = last_good_freq
         if pitch < 200 or pitch > 1500:
             pitch = last_good_freq
@@ -48,7 +47,8 @@ def filter_bad(last_good_freq, last_good_time, pitch):
 
 
 def record_audio(record_time = 10):
-    min_pitch = float('inf')
+    record_seconds = record_time
+    min_pitch = 5000
     max_pitch = 0
     timestamp = datetime.datetime.now()
     # Instantiate PyAudio
@@ -71,7 +71,7 @@ def record_audio(record_time = 10):
     last_good = 0
     last_good_time = datetime.datetime.now()
 
-    for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
+    for i in range(0, int(RATE / CHUNK * record_seconds)):
         data = stream.read(CHUNK)
         data_chunk = array.array('h', data)
         samples = np.frombuffer(data, dtype=aubio.float_type)
@@ -85,11 +85,12 @@ def record_audio(record_time = 10):
         if is_silent(data_chunk):
             if datetime.datetime.now() < timestamp + datetime.timedelta(0, 5):
                 frames.append(data)
-                print("No Noise but still writing")
+                # print("No Noise but still writing")
             else:
-                print("No Noise")
+                1
+                # print("No Noise")
         else:
-            print("Noise encountered")
+            # print("Noise encountered")
             frames.append(data)
             timestamp = datetime.datetime.now()
             # snippet = snippet.reshape(-1, pitch.hop_size)
@@ -98,9 +99,9 @@ def record_audio(record_time = 10):
             if real_pitch > 200:
                 last_good = pitch
                 last_good_time = datetime.datetime.now()
-                print convert_to_letter_pitch(pitch, 440)
+                # print convert_to_letter_pitch(pitch, 440)
         numpy_data.append(pitch)
-        print("\n")
+        # print("\n")
 
     # Write To File
     wav_file = wave.open(FILE_NAME, 'wb')
@@ -116,8 +117,8 @@ def record_audio(record_time = 10):
     p.terminate()
 
     # plot data
-    plt.plot(numpy_data)
-    plt.show()
+    # plt.plot(numpy_data)
+    # plt.show()
 
     return min_pitch, max_pitch
 
