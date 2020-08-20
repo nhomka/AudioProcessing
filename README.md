@@ -8,10 +8,8 @@ Running the script begins a quick little game.
 First, 5 seconds of audio will be recorded from
 your microphone.  The highest and lowest pitches
 heard during this time will be recorded.
-After this calibration, I display a plot
-of frequency vs time to view the recorded
-audio sample.  After closing, 10 random notes
-in the relevant interval will be printed.
+After this calibration, 10 random notes
+in the relevant interval will be printed one at a time.
 you will have 3 seconds to prepare for each,
 and 1 second of audio will be recorded.
 The goal is to match the written pitch.  
