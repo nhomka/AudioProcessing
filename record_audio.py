@@ -70,7 +70,7 @@ class AudioRecorder:
             samples = np.frombuffer(data, dtype=aubio.float_type)
             real_pitch = p_detection(samples)[0]
             pitch = filter_bad(last_good, last_good_time, real_pitch)
-            if min_pitch > pitch > 200:
+            if min_pitch > pitch > 100:
                 min_pitch = pitch
             if pitch > max_pitch:
                 max_pitch = pitch
