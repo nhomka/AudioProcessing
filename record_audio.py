@@ -14,19 +14,6 @@ CHANNELS = 2
 RATE = 44100
 FILE_NAME = "Recording.wav"
 
-pitches = {0: "C",
-           1: "C#",
-           2: "D",
-           3: "D#",
-           4: "E",
-           5: "F",
-           6: "F#",
-           7: "G",
-           8: "G#",
-           9: "A",
-           10: "A#",
-           11: "B"}
-
 
 def is_silent(audio_data):
     return max(audio_data) < 500
